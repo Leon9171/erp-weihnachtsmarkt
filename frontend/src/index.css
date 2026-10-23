@@ -1,17 +1,17 @@
 ﻿:root {
-  --bg: #f3f7ff;
-  --bg-strong: #e6f0ff;
-  --panel: rgba(255, 255, 255, 0.9);
+  --bg: #edf5ff;
+  --bg-strong: #dfeeff;
+  --panel: rgba(255, 255, 255, 0.94);
   --panel-strong: #ffffff;
   --primary: #1d4ed8;
-  --primary-dark: #1e3a8a;
+  --primary-dark: #163ea5;
   --primary-soft: #edf4ff;
-  --secondary: #bfdbfe;
-  --text: #0f172a;
-  --muted: #475569;
-  --border: rgba(30, 41, 59, 0.08);
-  --success: #2563eb;
-  --shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+  --secondary: #dfeeff;
+  --text: #102447;
+  --muted: #446089;
+  --border: rgba(29, 78, 216, 0.12);
+  --success: #1d4ed8;
+  --shadow: 0 10px 25px rgba(29, 78, 216, 0.08);
 }
 
 * {
@@ -46,22 +46,22 @@ button {
 
 .app-shell {
   min-height: 100vh;
-  max-width: 1600px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 22px;
+  padding: 18px;
 }
 
 .content {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 22px 24px 8px;
+  border-radius: 22px;
+  padding: 18px 18px 8px;
   box-shadow: var(--shadow);
 }
 
 .brand-mark {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 12px;
   display: inline-flex;
   align-items: center;
@@ -116,10 +116,12 @@ button {
   border-color: rgba(29, 78, 216, 0.2);
 }
 
-.dashboard-link.orange { background: linear-gradient(135deg, #eef6ff, #dfeeff); }
-.dashboard-link.blue { background: linear-gradient(135deg, #edf7ff, #dfeeff); }
-.dashboard-link.pink { background: linear-gradient(135deg, #f4f7ff, #e3ebff); }
-.dashboard-link.green { background: linear-gradient(135deg, #eff9ff, #dfeeff); }
+.dashboard-link.orange,
+.dashboard-link.blue,
+.dashboard-link.pink,
+.dashboard-link.green {
+  background: linear-gradient(135deg, #edf5ff, #dfeeff);
+}
 
 .dashboard-link strong {
   display: block;
@@ -154,20 +156,20 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  margin-bottom: 24px;
-  padding: 8px 10px 16px;
-  border-bottom: 1px solid rgba(124, 92, 72, 0.08);
+  margin-bottom: 20px;
+  padding: 6px 8px 12px;
+  border-bottom: 1px solid rgba(29, 78, 216, 0.08);
 }
 
 .topbar-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .topbar h2 {
-  margin: 5px 0 0;
-  font-size: clamp(1.4rem, 2vw, 2rem);
+  margin: 0;
+  font-size: clamp(1.25rem, 2vw, 1.9rem);
   letter-spacing: -0.05em;
 }
 
@@ -181,9 +183,9 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(46, 156, 99, 0.1);
-  color: var(--success);
-  border: 1px solid rgba(46, 156, 99, 0.18);
+  background: rgba(29, 78, 216, 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(29, 78, 216, 0.18);
   border-radius: 999px;
   padding: 8px 12px;
   font-size: 0.82rem;
@@ -195,8 +197,8 @@ button {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 0 5px rgba(46, 156, 99, 0.12);
+  background: var(--primary);
+  box-shadow: 0 0 0 5px rgba(29, 78, 216, 0.12);
 }
 
 .menu-toggle,
@@ -271,20 +273,11 @@ h2 {
   letter-spacing: -0.06em;
 }
 
-.metric-card.orange {
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-}
-
-.metric-card.blue {
-  background: linear-gradient(135deg, #f8fbff, #e2e8f0);
-}
-
-.metric-card.pink {
-  background: linear-gradient(135deg, #f4f7ff, #e0ebff);
-}
-
+.metric-card.orange,
+.metric-card.blue,
+.metric-card.pink,
 .metric-card.green {
-  background: linear-gradient(135deg, #edf5ff, #dbeafe);
+  background: linear-gradient(135deg, #edf5ff, #dfeeff);
 }
 
 .panel {
@@ -345,7 +338,7 @@ label {
 input,
 select {
   width: 100%;
-  border: 1px solid rgba(30, 41, 59, 0.1);
+  border: 1px solid rgba(29, 78, 216, 0.16);
   border-radius: 12px;
   padding: 12px 13px;
   background: rgba(255, 255, 255, 0.96);
@@ -550,30 +543,27 @@ button.small {
   color: var(--muted);
 }
 
-.profit-positive {
-  color: var(--success);
-  font-weight: 800;
-}
-
+.profit-positive,
 .profit-negative {
-  color: #b91c1c;
+  color: var(--primary);
   font-weight: 800;
 }
 
 @media (max-width: 860px) {
   .app-shell {
     display: block;
-    padding: 14px;
+    padding: 12px;
   }
 
   .content {
-    padding: 18px 16px 8px;
-    border-radius: 24px;
+    padding: 14px 12px 8px;
+    border-radius: 18px;
   }
 
   .topbar {
-    padding-left: 4px;
-    padding-right: 4px;
+    padding-left: 2px;
+    padding-right: 2px;
+    margin-bottom: 18px;
   }
 
   .dashboard-links {
@@ -583,5 +573,53 @@ button.small {
   .finance-row {
     grid-template-columns: 1fr 0.6fr 1fr 1fr 1fr;
     font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-shell {
+    padding: 8px;
+  }
+
+  .content {
+    padding: 12px 10px 6px;
+    border-radius: 16px;
+  }
+
+  .topbar {
+    gap: 8px;
+    align-items: center;
+  }
+
+  .topbar h2 {
+    font-size: 1.05rem;
+    line-height: 1.2;
+  }
+
+  .status-pill {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+  }
+
+  .page-header {
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .page-header h1 {
+    font-size: 1.7rem;
+    margin-bottom: 0;
+  }
+
+  .metric-card strong {
+    font-size: 1.45rem;
+  }
+
+  .dashboard-link {
+    padding: 14px 12px;
+  }
+
+  .panel {
+    padding: 14px 12px;
   }
 }
