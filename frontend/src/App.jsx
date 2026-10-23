@@ -25,15 +25,16 @@ const defaultArticles = [
 ];
 
 const defaultToppings = [
-  { id: 'top-1', name: 'Nutella', price: 1.2 },
-  { id: 'top-2', name: 'Erdbeeren', price: 1.5 },
-  { id: 'top-3', name: 'Krokant', price: 1.1 },
+  { id: 'top-1', name: 'Nutella', price: 1.2, articleId: 'art-1', articleName: 'Crepe' },
+  { id: 'top-2', name: 'Erdbeeren', price: 1.5, articleId: 'art-2', articleName: 'Waffel' },
+  { id: 'top-3', name: 'Krokant', price: 1.1, articleId: 'art-1', articleName: 'Crepe' },
 ];
 
 const defaultOrders = [
   {
     id: 'ORD-1001',
     customer: 'Anna M.',
+    customerNumber: 'K-1001',
     status: 'offen',
     createdAt: '2026-10-21T09:15:00.000Z',
     total: 11.8,
@@ -42,6 +43,7 @@ const defaultOrders = [
   {
     id: 'ORD-1002',
     customer: 'Müller',
+    customerNumber: 'K-1002',
     status: 'offen',
     createdAt: '2026-10-21T10:05:00.000Z',
     total: 9.5,
@@ -207,12 +209,16 @@ function DashboardPage({ articles, toppings, orders, expenses }) {
 function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
   const [articleName, setArticleName] = useState('');
   const [articlePrice, setArticlePrice] = useState('');
-  const [articleCost, setArticleCost] = useState('');
-  const [articleCategory, setArticleCategory] = useState('Süß');
-  const [articleStock, setArticleStock] = useState('');
 
   const [toppingName, setToppingName] = useState('');
   const [toppingPrice, setToppingPrice] = useState('');
+  const [selectedToppingArticleId, setSelectedToppingArticleId] = useState(articles[0]?.id || '');
+
+  useEffect(() => {
+    if (!selectedToppingArticleId && articles[0]) {
+      setSelectedToppingArticleId(articles[0].id);
+    }
+  }, [articles, selectedToppingArticleId]);
 
   const addArticle = (event) => {
     event.preventDefault();
@@ -226,18 +232,12 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
       {
         id: `art-${Date.now()}`,
         name,
-        category: articleCategory,
         price: Number(articlePrice || 0),
-        costPrice: Number(articleCost || 0),
-        stock: Number(articleStock || 0),
       },
     ]);
 
     setArticleName('');
     setArticlePrice('');
-    setArticleCost('');
-    setArticleCategory('Süß');
-    setArticleStock('');
   };
 
   const removeArticle = (id) => {
@@ -247,7 +247,9 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
   const addTopping = (event) => {
     event.preventDefault();
     const name = toppingName.trim();
-    if (!name) {
+    const article = articles.find((item) => item.id === selectedToppingArticleId);
+
+    if (!name || !article) {
       return;
     }
 
@@ -257,6 +259,8 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
         id: `top-${Date.now()}`,
         name,
         price: Number(toppingPrice || 0),
+        articleId: article.id,
+        articleName: article.name,
       },
     ]);
 
@@ -281,25 +285,8 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
               <input value={articleName} onChange={(e) => setArticleName(e.target.value)} placeholder="z. B. Crepe" />
             </label>
             <label>
-              Kategorie
-              <select value={articleCategory} onChange={(e) => setArticleCategory(e.target.value)}>
-                <option value="Süß">Süß</option>
-                <option value="Getränk">Getränk</option>
-                <option value="Herzhaft">Herzhaft</option>
-                <option value="Snack">Snack</option>
-              </select>
-            </label>
-            <label>
               Verkaufspreis
               <input type="number" min="0" step="0.1" value={articlePrice} onChange={(e) => setArticlePrice(e.target.value)} placeholder="4.50" />
-            </label>
-            <label>
-              Selbstkosten
-              <input type="number" min="0" step="0.1" value={articleCost} onChange={(e) => setArticleCost(e.target.value)} placeholder="1.70" />
-            </label>
-            <label>
-              Lagerbestand
-              <input type="number" min="0" value={articleStock} onChange={(e) => setArticleStock(e.target.value)} placeholder="50" />
             </label>
           </div>
           <button className="primary" type="submit">
@@ -310,6 +297,16 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
         <form className="panel" onSubmit={addTopping}>
           <h2>Topping anlegen</h2>
           <div className="form-grid">
+            <label>
+              Artikel
+              <select value={selectedToppingArticleId} onChange={(e) => setSelectedToppingArticleId(e.target.value)}>
+                {articles.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label>
               Name
               <input value={toppingName} onChange={(e) => setToppingName(e.target.value)} placeholder="z. B. Nutella" />
@@ -333,12 +330,9 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
               <div key={article.id} className="list-item">
                 <div>
                   <strong>{article.name}</strong>
-                  <span>{article.category}</span>
                 </div>
                 <div className="list-meta">
-                  <span>{article.stock} Stück</span>
                   <span>{formatMoney(article.price)}</span>
-                  <span>{formatMoney(article.costPrice || 0)} Kosten</span>
                   <button type="button" className="icon-button" onClick={() => removeArticle(article.id)}>
                     <Trash2 size={15} />
                   </button>
@@ -355,6 +349,7 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
               <div key={topping.id} className="list-item">
                 <div>
                   <strong>{topping.name}</strong>
+                  <small>{topping.articleName || 'Allgemein'}</small>
                 </div>
                 <div className="list-meta">
                   <span>{formatMoney(topping.price)}</span>
@@ -371,61 +366,121 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
   );
 }
 
-function OrdersPage({ articles, toppings, orders, setOrders }) {
-  const [orderNumber, setOrderNumber] = useState('');
-  const [customer, setCustomer] = useState('');
-  const [selectedArticleId, setSelectedArticleId] = useState(articles[0]?.id || '');
-  const [quantity, setQuantity] = useState(1);
-  const [selectedToppings, setSelectedToppings] = useState([]);
+function getNextOrderNumber(existingOrders) {
+  const maxNumber = existingOrders.reduce((highest, order) => {
+    const match = String(order.id || '').match(/(\d+)$/);
+    const value = match ? Number(match[1]) : 0;
+    return Math.max(highest, value);
+  }, 1000);
 
-  const article = useMemo(
-    () => articles.find((item) => item.id === selectedArticleId) || articles[0],
-    [articles, selectedArticleId]
+  return `ORD-${String(maxNumber + 1)}`;
+}
+
+function OrdersPage({ articles, toppings, orders, setOrders }) {
+  const [customerNumber, setCustomerNumber] = useState('');
+  const [positions, setPositions] = useState(() =>
+    articles[0] ? [{ id: `pos-${Date.now()}`, articleId: articles[0].id, quantity: 1, toppings: [] }] : []
   );
+  const [isArticleSelectorOpen, setIsArticleSelectorOpen] = useState(false);
+  const [isQuantitySelectorOpen, setIsQuantitySelectorOpen] = useState(false);
+  const [activeArticlePositionId, setActiveArticlePositionId] = useState(null);
+  const [activeQuantityPositionId, setActiveQuantityPositionId] = useState(null);
+  const [receipt, setReceipt] = useState(null);
 
   useEffect(() => {
-    if (!selectedArticleId && articles[0]) {
-      setSelectedArticleId(articles[0].id);
+    if (!positions.length && articles[0]) {
+      setPositions([{ id: `pos-${Date.now()}`, articleId: articles[0].id, quantity: 1, toppings: [] }]);
     }
-  }, [articles, selectedArticleId]);
+  }, [articles, positions.length]);
 
-  const toggleTopping = (toppingName) => {
-    setSelectedToppings((current) =>
-      current.includes(toppingName)
-        ? current.filter((item) => item !== toppingName)
-        : [...current, toppingName]
+  const updatePosition = (positionId, updater) => {
+    setPositions((current) =>
+      current.map((position) => (position.id === positionId ? updater(position) : position))
     );
   };
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    if (!article) {
+  const addPosition = () => {
+    if (!articles.length) {
       return;
     }
 
-    const numericOrderNumber = orderNumber.trim() || `ORD-${orders.length + 101}`;
-    const totalToppingPrice = selectedToppings.reduce((sum, toppingName) => {
+    setPositions((current) => [
+      ...current,
+      {
+        id: `pos-${Date.now()}-${Math.random()}`,
+        articleId: articles[0].id,
+        quantity: 1,
+        toppings: [],
+      },
+    ]);
+  };
+
+  const removePosition = (positionId) => {
+    setPositions((current) => current.filter((position) => position.id !== positionId));
+  };
+
+  const togglePositionTopping = (positionId, toppingName) => {
+    updatePosition(positionId, (position) => ({
+      ...position,
+      toppings: position.toppings.includes(toppingName)
+        ? position.toppings.filter((item) => item !== toppingName)
+        : [...position.toppings, toppingName],
+    }));
+  };
+
+  const positionOrderTotal = (position) => {
+    const article = articles.find((item) => item.id === position.articleId);
+    if (!article) {
+      return 0;
+    }
+
+    const toppingPrice = position.toppings.reduce((sum, toppingName) => {
       const topping = toppings.find((item) => item.name === toppingName);
       return sum + Number(topping?.price || 0);
     }, 0);
 
-    const orderTotal = (Number(article.price) + totalToppingPrice) * Number(quantity || 1);
+    return (Number(article.price) + toppingPrice) * Number(position.quantity || 1);
+  };
+
+  const orderTotal = positions.reduce((sum, position) => sum + positionOrderTotal(position), 0);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    const validPositions = positions.filter((position) => position.articleId);
+    if (!validPositions.length) {
+      return;
+    }
+
+    const nextOrderNumber = getNextOrderNumber(orders);
+    const items = validPositions.map((position) => {
+      const article = articles.find((item) => item.id === position.articleId);
+      if (!article) {
+        return null;
+      }
+
+      return {
+        articleName: article.name,
+        quantity: Number(position.quantity || 1),
+        toppings: position.toppings,
+        done: false,
+      };
+    }).filter(Boolean);
 
     const newOrder = {
-      id: numericOrderNumber,
-      customer: customer.trim() || 'Unbekannt',
+      id: nextOrderNumber,
+      customer: customerNumber.trim() || 'K-000',
+      customerNumber: customerNumber.trim() || 'K-000',
       status: 'offen',
       createdAt: new Date().toISOString(),
       total: Number(orderTotal.toFixed(2)),
-      items: [{ articleName: article.name, quantity: Number(quantity || 1), toppings: selectedToppings }],
+      items,
     };
 
     setOrders((current) => [newOrder, ...current]);
-    setOrderNumber('');
-    setCustomer('');
-    setSelectedToppings([]);
-    setQuantity(1);
-    setSelectedArticleId(articles[0]?.id || '');
+    setReceipt(newOrder);
+    setCustomerNumber('');
+    setPositions(articles[0] ? [{ id: `pos-${Date.now()}`, articleId: articles[0].id, quantity: 1, toppings: [] }] : []);
   };
 
   return (
@@ -434,73 +489,279 @@ function OrdersPage({ articles, toppings, orders, setOrders }) {
       <form className="panel" onSubmit={handleSubmit}>
         <div className="form-grid">
           <label>
-            Bestellnummer
-            <input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} placeholder="ORD-1042" />
-          </label>
-          <label>
-            Kunde
-            <input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="z. B. Anna M." />
-          </label>
-          <label>
-            Artikel
-            <select value={selectedArticleId} onChange={(e) => setSelectedArticleId(e.target.value)}>
-              {articles.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Menge
-            <input type="number" min="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            Kundennummer
+            <input value={customerNumber} onChange={(e) => setCustomerNumber(e.target.value)} placeholder="z. B. K-1042" />
           </label>
         </div>
 
-        <div className="checkbox-group">
-          {toppings.map((topping) => (
-            <label key={topping.id} className="check-item">
-              <input
-                type="checkbox"
-                checked={selectedToppings.includes(topping.name)}
-                onChange={() => toggleTopping(topping.name)}
-              />
-              <span>
-                {topping.name} ({formatMoney(topping.price)})
-              </span>
-            </label>
-          ))}
+        <div className="position-list">
+          {positions.map((position) => {
+            const positionArticle = articles.find((item) => item.id === position.articleId) || articles[0];
+            const positionToppings = toppings.filter((topping) => {
+              if (!topping.articleId) {
+                return true;
+              }
+              return topping.articleId === position.articleId;
+            });
+
+            return (
+              <div key={position.id} className="position-card">
+                <div className="position-head">
+                  <div className="field-group position-article-field">
+                    <span>Artikel</span>
+                    <button
+                      type="button"
+                      className="article-picker-button"
+                      onClick={() => {
+                        setActiveArticlePositionId(position.id);
+                        setIsArticleSelectorOpen(true);
+                      }}
+                    >
+                      {positionArticle ? positionArticle.name : 'Artikel auswählen'}
+                    </button>
+                  </div>
+
+                  <div className="position-quantity-field">
+                    <span>Menge</span>
+                    <button
+                      type="button"
+                      className="quantity-picker-button"
+                      onClick={() => {
+                        setActiveQuantityPositionId(position.id);
+                        setIsQuantitySelectorOpen(true);
+                      }}
+                    >
+                      {position.quantity}
+                    </button>
+                  </div>
+
+                  {positions.length > 1 ? (
+                    <button type="button" className="icon-button danger-button" onClick={() => removePosition(position.id)}>
+                      <Trash2 size={15} />
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="topping-picker">
+                  {positionToppings.map((topping) => {
+                    const isSelected = position.toppings.includes(topping.name);
+                    return (
+                      <button
+                        key={topping.id}
+                        type="button"
+                        className={`topping-chip ${isSelected ? 'selected' : ''}`}
+                        onClick={() => togglePositionTopping(position.id, topping.name)}
+                      >
+                        {topping.name}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="position-total">
+                  <strong>Position:</strong> {formatMoney(positionOrderTotal(position))}
+                </div>
+              </div>
+            );
+          })}
         </div>
+
+        <button type="button" className="secondary-button" onClick={addPosition}>
+          <Plus size={16} /> Position hinzufügen
+        </button>
+
+        {isQuantitySelectorOpen && activeQuantityPositionId ? (
+          <div className="article-picker-overlay" onClick={() => setIsQuantitySelectorOpen(false)}>
+            <div className="article-picker-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="article-picker-header">
+                <h3>Menge wählen</h3>
+                <button type="button" className="icon-button" onClick={() => setIsQuantitySelectorOpen(false)}>
+                  ×
+                </button>
+              </div>
+
+              <div className="quantity-picker-grid">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`quantity-option ${positions.find((position) => position.id === activeQuantityPositionId)?.quantity === value ? 'selected' : ''}`}
+                    onClick={() => {
+                      updatePosition(activeQuantityPositionId, (current) => ({
+                        ...current,
+                        quantity: value,
+                      }));
+                      setActiveQuantityPositionId(null);
+                      setIsQuantitySelectorOpen(false);
+                    }}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {isArticleSelectorOpen ? (
+          <div className="article-picker-overlay" onClick={() => setIsArticleSelectorOpen(false)}>
+            <div className="article-picker-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="article-picker-header">
+                <h3>Artikel wählen</h3>
+                <button type="button" className="icon-button" onClick={() => setIsArticleSelectorOpen(false)}>
+                  ×
+                </button>
+              </div>
+
+              <div className="article-picker-grid">
+                {articles.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`article-option ${positions.find((position) => position.id === activeArticlePositionId)?.articleId === item.id ? 'selected' : ''}`}
+                    onClick={() => {
+                      if (activeArticlePositionId) {
+                        updatePosition(activeArticlePositionId, (current) => ({
+                          ...current,
+                          articleId: item.id,
+                          toppings: [],
+                        }));
+                      }
+                      setActiveArticlePositionId(null);
+                      setIsArticleSelectorOpen(false);
+                    }}
+                  >
+                    <strong>{item.name}</strong>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="summary-box">
-          <strong>Gesamtpreis:</strong>{' '}
-          {formatMoney(
-            ((Number(article?.price || 0) +
-              selectedToppings.reduce((sum, toppingName) => {
-                const topping = toppings.find((item) => item.name === toppingName);
-                return sum + Number(topping?.price || 0);
-              }, 0)) *
-              Number(quantity || 1))
-          )}
+          <strong>Gesamtpreis:</strong> {formatMoney(orderTotal)}
         </div>
 
         <button className="primary" type="submit">
           <ShoppingCart size={16} /> Bestellung aufnehmen
         </button>
       </form>
+
+      {receipt ? (
+        <div className="receipt-overlay" onClick={() => setReceipt(null)}>
+          <div className="receipt-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="receipt-header">
+              <div>
+                <span className="receipt-label">Abrechnung</span>
+                <h3>{receipt.id}</h3>
+              </div>
+              <button type="button" className="icon-button" onClick={() => setReceipt(null)}>
+                ×
+              </button>
+            </div>
+
+            <div className="receipt-list">
+              {receipt.items.map((item, index) => {
+                const basePrice = articles.find((entry) => entry.name === item.articleName)?.price || 0;
+                const toppingTotal = (item.toppings || []).reduce((sum, toppingName) => {
+                  const topping = toppings.find((entry) => entry.name === toppingName);
+                  return sum + Number(topping?.price || 0);
+                }, 0);
+
+                return (
+                  <div key={`${receipt.id}-${index}`} className="receipt-item">
+                    <div className="receipt-item-main">
+                      <strong>{item.quantity}x {item.articleName}</strong>
+                      {item.toppings.length > 0 ? <small>{item.toppings.join(', ')}</small> : <small>ohne Extras</small>}
+                    </div>
+                    <span>{formatMoney((basePrice + toppingTotal) * Number(item.quantity || 1))}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="receipt-total">
+              <span>Gesamt</span>
+              <strong>{formatMoney(receipt.total)}</strong>
+            </div>
+
+            <div className="receipt-actions">
+              <button type="button" className="primary" onClick={() => setReceipt(null)}>
+                bezahlt
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
 function OpenOrdersPage({ orders, setOrders }) {
   const openOrders = orders.filter((order) => order.status === 'offen');
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState(false);
+  const [pendingItemAction, setPendingItemAction] = useState(null);
+
+  const selectedOrder = orders.find((order) => order.id === selectedOrderId) || null;
+
+  const toggleItemDone = (orderId, itemIndex) => {
+    const targetOrder = orders.find((order) => order.id === orderId);
+    const targetItem = targetOrder?.items?.[itemIndex];
+    if (!targetOrder || !targetItem) {
+      return;
+    }
+
+    setPendingItemAction({
+      orderId,
+      itemIndex,
+      nextDone: !Boolean(targetItem.done),
+    });
+  };
+
+  const confirmItemToggle = () => {
+    if (!pendingItemAction) {
+      return;
+    }
+
+    const { orderId, itemIndex, nextDone } = pendingItemAction;
+
+    setOrders((current) =>
+      current.map((order) => {
+        if (order.id !== orderId) {
+          return order;
+        }
+
+        const updatedItems = order.items.map((item, index) => {
+          if (index !== itemIndex) {
+            return item;
+          }
+
+          return { ...item, done: nextDone };
+        });
+
+        const allDone = updatedItems.length > 0 && updatedItems.every((item) => Boolean(item.done));
+
+        return {
+          ...order,
+          items: updatedItems,
+          status: allDone ? 'erledigt' : 'offen',
+        };
+      })
+    );
+
+    setPendingItemAction(null);
+  };
 
   const completeOrder = (id) => {
     setOrders((current) =>
       current.map((order) =>
-        order.id === id ? { ...order, status: 'erledigt' } : order
+        order.id === id ? { ...order, status: 'erledigt', items: order.items.map((item) => ({ ...item, done: true })) } : order
       )
     );
+    setSelectedOrderId(null);
+    setPendingConfirmation(false);
   };
 
   return (
@@ -512,11 +773,20 @@ function OpenOrdersPage({ orders, setOrders }) {
         ) : (
           <div className="queue-list">
             {openOrders.map((order) => (
-              <div key={order.id} className="queue-item">
+              <button
+                key={order.id}
+                type="button"
+                className="queue-item order-select-button"
+                onClick={() => {
+                  setSelectedOrderId(order.id);
+                  setPendingConfirmation(false);
+                }}
+              >
                 <div className="queue-head">
                   <div>
                     <span className="order-number">{order.id}</span>
                     <strong>{order.customer}</strong>
+                    {order.customerNumber ? <small>{order.customerNumber}</small> : null}
                   </div>
                   <span className="price">{formatMoney(order.total)}</span>
                 </div>
@@ -529,15 +799,86 @@ function OpenOrdersPage({ orders, setOrders }) {
                     </div>
                   ))}
                 </div>
-
-                <button type="button" className="primary small" onClick={() => completeOrder(order.id)}>
-                  <CheckCircle2 size={15} /> Als erledigt markieren
-                </button>
-              </div>
+              </button>
             ))}
           </div>
         )}
       </div>
+
+      {selectedOrder ? (
+        <div className="receipt-overlay" onClick={() => setSelectedOrderId(null)}>
+          <div className="order-detail-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="receipt-header">
+              <div>
+                <span className="receipt-label">Auftrag</span>
+                <h3>{selectedOrder.id}</h3>
+              </div>
+              <button type="button" className="icon-button" onClick={() => setSelectedOrderId(null)}>
+                ×
+              </button>
+            </div>
+
+            <div className="order-detail-meta">
+              <strong>{selectedOrder.customer}</strong>
+              {selectedOrder.customerNumber ? <span>{selectedOrder.customerNumber}</span> : null}
+              <span>{formatMoney(selectedOrder.total)}</span>
+            </div>
+
+            <div className="order-item-list">
+              {selectedOrder.items.map((item, index) => {
+                const isDone = Boolean(item.done);
+
+                return (
+                  <button
+                    key={`${selectedOrder.id}-${index}`}
+                    type="button"
+                    className={`order-item-toggle ${isDone ? 'done' : ''}`}
+                    onClick={() => toggleItemDone(selectedOrder.id, index)}
+                  >
+                    <div>
+                      <strong>{item.quantity}x {item.articleName}</strong>
+                      {item.toppings.length > 0 ? <small>{item.toppings.join(', ')}</small> : <small>ohne Extras</small>}
+                    </div>
+                    <span>{isDone ? 'erledigt' : 'offen'}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {pendingItemAction ? (
+              <div className="confirm-box">
+                <p>
+                  {pendingItemAction.nextDone ? 'Position als erledigt markieren?' : 'Position als offen zurücksetzen?'}
+                </p>
+                <div className="confirm-actions">
+                  <button type="button" className="secondary-button" onClick={() => setPendingItemAction(null)}>
+                    Abbrechen
+                  </button>
+                  <button type="button" className="primary" onClick={confirmItemToggle}>
+                    {pendingItemAction.nextDone ? 'Ja, erledigt' : 'Ja, zurücksetzen'}
+                  </button>
+                </div>
+              </div>
+            ) : pendingConfirmation ? (
+              <div className="confirm-box">
+                <p>Auftrag wirklich als erledigt markieren?</p>
+                <div className="confirm-actions">
+                  <button type="button" className="secondary-button" onClick={() => setPendingConfirmation(false)}>
+                    Abbrechen
+                  </button>
+                  <button type="button" className="primary" onClick={() => completeOrder(selectedOrder.id)}>
+                    Ja, erledigt
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="primary" onClick={() => setPendingConfirmation(true)}>
+                <CheckCircle2 size={15} /> Als erledigt markieren
+              </button>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -841,10 +1182,7 @@ function Layout({ children }) {
             <div className="brand-mark">
               <LayoutGrid size={18} />
             </div>
-            <div>
-              <span className="eyebrow">Verwaltung</span>
-              <h2>ERP Weihnachtsmarkt</h2>
-            </div>
+            <h2>ERP Weihnachtsmarkt</h2>
           </div>
 
           <div className="topbar-actions">
