@@ -85,7 +85,7 @@ function useStoredState(key, fallback) {
 
 function PageHeader({ title, showBack = false }) {
   return (
-    <div className="page-header">
+    <div className={`page-header${showBack ? ' subpage-header' : ''}`}>
       {showBack ? (
         <Link to="/" className="back-link">
           <ArrowLeft size={18} /> Zurück
@@ -999,7 +999,6 @@ function OpenOrdersPage({ orders, setOrders }) {
           <div className="order-detail-panel" onClick={(event) => event.stopPropagation()}>
             <div className="receipt-header">
               <div>
-                <span className="receipt-label">Auftrag</span>
                 <h3>Bestelldetails</h3>
               </div>
               <button type="button" className="icon-button" onClick={() => setSelectedOrderId(null)}>
@@ -1008,9 +1007,10 @@ function OpenOrdersPage({ orders, setOrders }) {
             </div>
 
             <div className="order-detail-meta">
-              <strong>{selectedOrder.customer}</strong>
-              {selectedOrder.customerNumber ? <span>{selectedOrder.customerNumber}</span> : null}
-              <span>{formatMoney(selectedOrder.total)}</span>
+              <span className="order-customer-number">
+                <small>Kundennummer</small>
+                <strong>{selectedOrder.customerNumber || '—'}</strong>
+              </span>
             </div>
 
             <div className="order-item-list">
@@ -1063,7 +1063,7 @@ function OpenOrdersPage({ orders, setOrders }) {
                 </div>
               </div>
             ) : (
-              <button type="button" className="primary" onClick={() => setPendingConfirmation(true)}>
+              <button type="button" className="primary order-complete-button" onClick={() => setPendingConfirmation(true)}>
                 <CheckCircle2 size={15} /> Als erledigt markieren
               </button>
             )}
@@ -1074,31 +1074,24 @@ function OpenOrdersPage({ orders, setOrders }) {
   );
 }
 
-function ExpensesPage({ expenses, setExpenses }) {
+function ExpensesPage({ articles, expenses, setExpenses }) {
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('Material');
+  const [articleId, setArticleId] = useState('');
   const [amount, setAmount] = useState('');
   const [occurredOn, setOccurredOn] = useState(new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState('');
 
-  const categoryOptions = [
-    'Material',
-    'Personal',
-    'Betriebskosten',
-    'Verpackung',
-    'Marketing',
-    'Sonstiges',
-  ];
-
   const categoryTotals = useMemo(() => {
-    const totals = {};
+    const totals = { 'Wareneinsatz': 0, 'Allgemeine Ausgabe': 0 };
 
     expenses.forEach((expense) => {
-      const key = expense.category || 'Sonstiges';
+      const key = expense.articleId ? 'Wareneinsatz' : 'Allgemeine Ausgabe';
       totals[key] = (totals[key] || 0) + Number(expense.amount || 0);
     });
 
-    return Object.entries(totals).map(([name, total]) => ({ name, total }));
+    return Object.entries(totals)
+      .filter(([, total]) => total > 0)
+      .map(([name, total]) => ({ name, total }));
   }, [expenses]);
 
   const addExpense = (event) => {
@@ -1108,11 +1101,14 @@ function ExpensesPage({ expenses, setExpenses }) {
       return;
     }
 
+    const assignedArticle = articles.find((article) => article.id === articleId);
     setExpenses((current) => [
       {
         id: `exp-${Date.now()}`,
         title: nextTitle,
-        category: category.trim() || 'Sonstiges',
+        category: assignedArticle ? 'Wareneinsatz' : 'Allgemeine Ausgabe',
+        articleId: assignedArticle?.id || '',
+        articleName: assignedArticle?.name || '',
         amount: Number(amount),
         occurredOn,
         note: note.trim(),
@@ -1121,7 +1117,7 @@ function ExpensesPage({ expenses, setExpenses }) {
     ]);
 
     setTitle('');
-    setCategory('Material');
+    setArticleId('');
     setAmount('');
     setNote('');
     setOccurredOn(new Date().toISOString().slice(0, 10));
@@ -1144,13 +1140,15 @@ function ExpensesPage({ expenses, setExpenses }) {
               <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Mehl" />
             </label>
             <label>
-              Kategorie
-              <input
-                list="expense-category-options"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                placeholder="Material"
-              />
+              Artikel zuordnen (optional)
+              <select value={articleId} onChange={(event) => setArticleId(event.target.value)}>
+                <option value="">Allgemeine Ausgabe</option>
+                {articles.map((article) => (
+                  <option key={article.id} value={article.id}>
+                    {article.name}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               Betrag
@@ -1167,19 +1165,13 @@ function ExpensesPage({ expenses, setExpenses }) {
             <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="z. B. Lieferkosten für Zutaten" />
           </label>
 
-          <datalist id="expense-category-options">
-            {categoryOptions.map((option) => (
-              <option key={option} value={option} />
-            ))}
-          </datalist>
-
           <button className="primary" type="submit">
             <Plus size={16} /> Ausgabe speichern
           </button>
         </form>
 
         <div className="panel">
-          <h2>Ausgaben nach Kategorie</h2>
+          <h2>Ausgabenübersicht</h2>
           {categoryTotals.length === 0 ? (
             <p className="empty-state">Noch keine Ausgaben erfasst.</p>
           ) : (
@@ -1206,7 +1198,9 @@ function ExpensesPage({ expenses, setExpenses }) {
                 <div>
                   <strong>{expense.title}</strong>
                   <span>
-                    {expense.category} • {new Date(expense.occurredOn).toLocaleDateString('de-DE')}
+                  {expense.articleId ? 'Wareneinsatz' : 'Allgemeine Ausgabe'}
+                  {expense.articleId && expense.articleName ? ` · ${expense.articleName}` : ''}
+                  {' • '}{new Date(expense.occurredOn).toLocaleDateString('de-DE')}
                   </span>
                   {expense.note ? <small>{expense.note}</small> : null}
                 </div>
@@ -1235,7 +1229,7 @@ function FinancePage({ articles, toppings, orders, expenses }) {
     const metrics = new Map();
 
     orders.forEach((order) => {
-      order.items.forEach((item) => {
+      (order.items || []).forEach((item) => {
         const article = articles.find((entry) => entry.name === item.articleName) || null;
         const quantity = Number(item.quantity || 0);
         const toppingRevenue = (item.toppings || []).reduce((sum, toppingName) => {
@@ -1259,6 +1253,22 @@ function FinancePage({ articles, toppings, orders, expenses }) {
       });
     });
 
+    expenses
+      .filter((expense) => expense.articleId)
+      .forEach((expense) => {
+        const article = articles.find((entry) => entry.id === expense.articleId);
+        const name = article?.name || expense.articleName || 'Unbekannter Artikel';
+        const row = metrics.get(name) || {
+          name,
+          sold: 0,
+          revenue: 0,
+          cost: 0,
+        };
+
+        row.cost += Number(expense.amount || 0);
+        metrics.set(name, row);
+      });
+
     return [...metrics.values()]
       .map((entry) => ({
         ...entry,
@@ -1266,23 +1276,21 @@ function FinancePage({ articles, toppings, orders, expenses }) {
         margin: entry.revenue ? ((entry.revenue - entry.cost) / entry.revenue) * 100 : 0,
       }))
       .sort((a, b) => b.profit - a.profit);
-  }, [articles, orders, toppingLookup]);
+  }, [articles, orders, expenses, toppingLookup]);
 
   const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
   const totalCost = itemPerformance.reduce((sum, item) => sum + Number(item.cost || 0), 0);
-  const totalExpenses = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const generalExpenses = expenses
+    .filter((expense) => !expense.articleId)
+    .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
   const grossProfit = totalRevenue - totalCost;
-  const netProfit = grossProfit - totalExpenses;
+  const netProfit = grossProfit - generalExpenses;
   const netMargin = totalRevenue ? (netProfit / totalRevenue) * 100 : 0;
-
-  const expenseByCategory = useMemo(() => {
-    const totals = {};
-    expenses.forEach((expense) => {
-      const key = expense.category || 'Sonstiges';
-      totals[key] = (totals[key] || 0) + Number(expense.amount || 0);
-    });
-    return Object.entries(totals).map(([label, value]) => ({ label, value }));
-  }, [expenses]);
+  const revenueOrders = [...orders].sort((a, b) => {
+    const dateA = new Date(a.createdAt || 0).getTime();
+    const dateB = new Date(b.createdAt || 0).getTime();
+    return (Number.isNaN(dateB) ? 0 : dateB) - (Number.isNaN(dateA) ? 0 : dateA);
+  });
 
   return (
     <div>
@@ -1303,7 +1311,7 @@ function FinancePage({ articles, toppings, orders, expenses }) {
         </div>
         <div className="metric-card orange">
           <span>Ausgaben</span>
-          <strong>{formatMoney(totalExpenses)}</strong>
+          <strong>{formatMoney(generalExpenses)}</strong>
         </div>
         <div className="metric-card blue">
           <span>Nettoergebnis</span>
@@ -1315,19 +1323,68 @@ function FinancePage({ articles, toppings, orders, expenses }) {
         </div>
       </div>
 
+      <div className="panel order-revenue-panel">
+        <div className="open-orders-section-heading">
+          <div>
+            <h2>Einnahmen nach Bestellung</h2>
+            <p>Einzelübersicht der erfassten Bestellungen.</p>
+          </div>
+          <span className="open-orders-count">{orders.length} Bestellungen</span>
+        </div>
+        {revenueOrders.length === 0 ? (
+          <p className="empty-state">Noch keine Bestellungen vorhanden.</p>
+        ) : (
+          <div className="order-revenue-list">
+            {revenueOrders.map((order) => {
+              const date = order.createdAt ? new Date(order.createdAt) : null;
+              const formattedDate =
+                date && !Number.isNaN(date.getTime())
+                  ? new Intl.DateTimeFormat('de-DE', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }).format(date)
+                  : 'Datum unbekannt';
+
+              return (
+                <div key={order.id} className="order-revenue-row">
+                  <div className="order-revenue-details">
+                    <div className="order-revenue-heading">
+                      <strong>{order.id}</strong>
+                      <span>{formatMoney(order.total)}</span>
+                    </div>
+                    <small>
+                      Kundennummer: {order.customerNumber || '—'} <span aria-hidden="true">·</span> {formattedDate}
+                    </small>
+                    <div className="order-revenue-items">
+                      {(order.items || []).map((item, index) => (
+                        <span key={`${order.id}-${index}`}>
+                          {item.quantity}× {item.articleName}
+                          {item.toppings?.length ? ` · ${item.toppings.join(', ')}` : ''}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div className="two-column">
         <div className="panel">
-          <h2>Ausgaben pro Kategorie</h2>
-          {expenseByCategory.length === 0 ? (
-            <p className="empty-state">Noch keine Ausgaben erfasst.</p>
+          <h2>Ausgabenarten</h2>
+          {generalExpenses === 0 ? (
+            <p className="empty-state">Noch keine allgemeinen Ausgaben erfasst.</p>
           ) : (
             <div className="category-list">
-              {expenseByCategory.map(({ label, value }) => (
-                <div key={label} className="list-item compact">
-                  <strong>{label}</strong>
-                  <span>{formatMoney(value)}</span>
-                </div>
-              ))}
+              <div className="list-item compact">
+                <strong>Allgemeine Ausgabe</strong>
+                <span>{formatMoney(generalExpenses)}</span>
+              </div>
             </div>
           )}
         </div>
@@ -1410,7 +1467,7 @@ export default function App() {
           element={<OrdersPage articles={articles} toppings={toppings} orders={orders} setOrders={setOrders} />}
         />
         <Route path="/offene-auftraege" element={<OpenOrdersPage orders={orders} setOrders={setOrders} />} />
-        <Route path="/ausgaben" element={<ExpensesPage expenses={expenses} setExpenses={setExpenses} />} />
+        <Route path="/ausgaben" element={<ExpensesPage articles={articles} expenses={expenses} setExpenses={setExpenses} />} />
         <Route path="/finanzen" element={<FinancePage articles={articles} toppings={toppings} orders={orders} expenses={expenses} />} />
       </Routes>
     </Layout>

@@ -78,6 +78,19 @@ button {
   margin-bottom: 24px;
 }
 
+.page-header.subpage-header {
+  position: sticky;
+  top: 8px;
+  z-index: 40;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 6px 16px rgba(16, 36, 71, 0.06);
+  backdrop-filter: blur(12px);
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -933,21 +946,43 @@ button.small {
 }
 
 .order-detail-panel {
-  width: min(460px, 100%);
+  width: min(500px, 100%);
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 22px;
-  padding: 18px;
+  padding: 22px;
   box-shadow: var(--shadow);
 }
 
+.order-detail-panel .receipt-header {
+  margin-bottom: 20px;
+}
+
+.order-detail-panel .receipt-header h3 {
+  margin: 0;
+  font-size: 1.65rem;
+  letter-spacing: -0.05em;
+}
+
 .order-detail-meta {
+  margin-bottom: 18px;
+}
+
+.order-customer-number {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 0.92rem;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.order-customer-number small {
   color: var(--muted);
-  margin-bottom: 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.order-customer-number strong {
+  color: var(--text);
+  font-size: 1rem;
 }
 
 .order-item-list {
@@ -963,7 +998,7 @@ button.small {
   justify-content: space-between;
   gap: 12px;
   width: 100%;
-  padding: 12px 14px;
+  padding: 14px 15px;
   border-radius: 12px;
   border: 1px solid rgba(29, 78, 216, 0.12);
   background: rgba(237, 244, 255, 0.7);
@@ -971,13 +1006,46 @@ button.small {
   text-align: left;
 }
 
+.order-item-toggle > div {
+  display: grid;
+  gap: 4px;
+}
+
 .order-item-toggle strong,
 .order-item-toggle small {
   display: block;
 }
 
+.order-item-toggle strong {
+  font-size: 0.98rem;
+}
+
 .order-item-toggle small {
   color: var(--muted);
+}
+
+.order-item-toggle > span {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.order-complete-button {
+  width: 100%;
+  min-height: 48px;
+}
+
+.order-detail-panel .confirm-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.order-detail-panel .confirm-actions button {
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
 }
 
 .order-item-toggle.done {
@@ -1030,6 +1098,65 @@ button.small {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.order-revenue-panel {
+  margin-bottom: 24px;
+}
+
+.order-revenue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.order-revenue-row {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.order-revenue-details {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.order-revenue-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.order-revenue-heading strong {
+  overflow-wrap: anywhere;
+}
+
+.order-revenue-heading > span {
+  flex: 0 0 auto;
+  color: #276546;
+  font-weight: 850;
+}
+
+.order-revenue-details > small {
+  color: var(--muted);
+}
+
+.order-revenue-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.order-revenue-items > span {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--primary-soft);
+  color: var(--text);
+  font-size: 0.78rem;
 }
 
 .order-management-actions {
@@ -1145,6 +1272,11 @@ button.small {
     border-radius: 18px;
   }
 
+  .page-header.subpage-header {
+    margin: 0 0 12px;
+    padding: 11px 12px;
+  }
+
   .topbar {
     padding-left: 2px;
     padding-right: 2px;
@@ -1190,6 +1322,11 @@ button.small {
   .page-header {
     gap: 10px;
     margin-bottom: 18px;
+  }
+
+  .page-header.subpage-header {
+    margin: 0 0 12px;
+    padding: 10px 11px;
   }
 
   .page-header h1 {
