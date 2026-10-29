@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { Link, Route, Routes } from 'react-router-dom';
+import { Link, Route, Routes, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -83,7 +83,7 @@ function useStoredState(key, fallback) {
   return [state, setState];
 }
 
-function PageHeader({ title, subtitle, showBack = false }) {
+function PageHeader({ title, showBack = false }) {
   return (
     <div className="page-header">
       {showBack ? (
@@ -92,20 +92,18 @@ function PageHeader({ title, subtitle, showBack = false }) {
         </Link>
       ) : null}
       <div>
-        {subtitle ? <span className="eyebrow">{subtitle}</span> : null}
         <h1>{title}</h1>
       </div>
     </div>
   );
 }
 
-function DashboardPage({ articles, toppings, orders, expenses }) {
-  const openOrders = orders.filter((order) => order.status === 'offen');
-  const totalRevenue = orders
-    .filter((order) => order.status !== 'erledigt')
-    .reduce((sum, order) => sum + Number(order.total || 0), 0);
-  const totalExpenses = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const netBalance = totalRevenue - totalExpenses;
+function DashboardPage({ articles, orders, expenses }) {
+  const openOrders = orders.filter(
+    (order) =>
+      order.status === 'offen' &&
+      order.items?.some((item) => item.showInOpenOrders !== false && !item.done)
+  );
 
   const quickLinks = [
     {
@@ -145,18 +143,9 @@ function DashboardPage({ articles, toppings, orders, expenses }) {
     },
   ];
 
-  const cards = [
-    { label: 'Offene Aufträge', value: openOrders.length, accent: 'orange' },
-    { label: 'Artikel', value: articles.length, accent: 'blue' },
-    { label: 'Toppings', value: toppings.length, accent: 'pink' },
-    { label: 'Umsatz', value: formatMoney(totalRevenue), accent: 'green' },
-    { label: 'Ausgaben', value: formatMoney(totalExpenses), accent: 'blue' },
-    { label: 'Saldo', value: formatMoney(netBalance), accent: 'green' },
-  ];
-
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="Übersicht" />
+      <PageHeader title="Dashboard" />
 
       <div className="dashboard-links">
         {quickLinks.map(({ to, title, description, accent, icon: Icon }) => (
@@ -171,37 +160,6 @@ function DashboardPage({ articles, toppings, orders, expenses }) {
           </Link>
         ))}
       </div>
-
-      <div className="card-grid">
-        {cards.map((card) => (
-          <div key={card.label} className={`metric-card ${card.accent}`}>
-            <span>{card.label}</span>
-            <strong>{card.value}</strong>
-          </div>
-        ))}
-      </div>
-
-      <div className="panel">
-        <h2>Aktueller Betrieb</h2>
-        <div className="stats-list">
-          <div>
-            <label>Verfügbare Artikel</label>
-            <strong>{articles.length}</strong>
-          </div>
-          <div>
-            <label>Verfügbare Toppings</label>
-            <strong>{toppings.length}</strong>
-          </div>
-          <div>
-            <label>Bestellungen heute</label>
-            <strong>{orders.length}</strong>
-          </div>
-          <div>
-            <label>Ausgaben gesamt</label>
-            <strong>{formatMoney(totalExpenses)}</strong>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -209,6 +167,7 @@ function DashboardPage({ articles, toppings, orders, expenses }) {
 function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
   const [articleName, setArticleName] = useState('');
   const [articlePrice, setArticlePrice] = useState('');
+  const [showInOpenOrders, setShowInOpenOrders] = useState(true);
 
   const [toppingName, setToppingName] = useState('');
   const [toppingPrice, setToppingPrice] = useState('');
@@ -233,15 +192,23 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
         id: `art-${Date.now()}`,
         name,
         price: Number(articlePrice || 0),
+        showInOpenOrders,
       },
     ]);
 
     setArticleName('');
     setArticlePrice('');
+    setShowInOpenOrders(true);
   };
 
   const removeArticle = (id) => {
     setArticles((current) => current.filter((item) => item.id !== id));
+  };
+
+  const toggleArticleOpenOrder = (id, value) => {
+    setArticles((current) =>
+      current.map((item) => (item.id === id ? { ...item, showInOpenOrders: value } : item))
+    );
   };
 
   const addTopping = (event) => {
@@ -274,7 +241,7 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
 
   return (
     <div>
-      <PageHeader title="Artikel verwalten" subtitle="Produkte" showBack />
+      <PageHeader title="Artikel verwalten" showBack />
 
       <div className="two-column">
         <form className="panel" onSubmit={addArticle}>
@@ -289,6 +256,14 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
               <input type="number" min="0" step="0.1" value={articlePrice} onChange={(e) => setArticlePrice(e.target.value)} placeholder="4.50" />
             </label>
           </div>
+          <label className="article-open-order-toggle">
+            <input
+              type="checkbox"
+              checked={showInOpenOrders}
+              onChange={(event) => setShowInOpenOrders(event.target.checked)}
+            />
+            In offenen Aufträgen anzeigen
+          </label>
           <button className="primary" type="submit">
             <Plus size={16} /> Artikel hinzufügen
           </button>
@@ -330,6 +305,14 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
               <div key={article.id} className="list-item">
                 <div>
                   <strong>{article.name}</strong>
+                  <label className="article-open-order-toggle">
+                    <input
+                      type="checkbox"
+                      checked={article.showInOpenOrders !== false}
+                      onChange={(event) => toggleArticleOpenOrder(article.id, event.target.checked)}
+                    />
+                    In offenen Aufträgen anzeigen
+                  </label>
                 </div>
                 <div className="list-meta">
                   <span>{formatMoney(article.price)}</span>
@@ -379,17 +362,38 @@ function getNextOrderNumber(existingOrders) {
 function OrdersPage({ articles, toppings, orders, setOrders }) {
   const [customerNumber, setCustomerNumber] = useState('');
   const [positions, setPositions] = useState(() =>
-    articles[0] ? [{ id: `pos-${Date.now()}`, articleId: articles[0].id, quantity: 1, toppings: [] }] : []
+    articles[0] ? [{ id: `pos-${Date.now()}`, articleId: articles[0].id, toppings: [] }] : []
   );
   const [isArticleSelectorOpen, setIsArticleSelectorOpen] = useState(false);
-  const [isQuantitySelectorOpen, setIsQuantitySelectorOpen] = useState(false);
   const [activeArticlePositionId, setActiveArticlePositionId] = useState(null);
-  const [activeQuantityPositionId, setActiveQuantityPositionId] = useState(null);
+  const [isOrderListOpen, setIsOrderListOpen] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState(null);
+  const [saveMessage, setSaveMessage] = useState('');
   const [receipt, setReceipt] = useState(null);
+  const [handoverOrderId, setHandoverOrderId] = useState(null);
+  const handoverOrder = orders.find((order) => order.id === handoverOrderId) || null;
+  const hasPendingHandoverItems = handoverOrder?.items.some(
+    (item) => item.showInOpenOrders === false && !item.done
+  ) || false;
+
+  useEffect(() => {
+    if (handoverOrderId) {
+      return;
+    }
+
+    const paidOrderWithPendingHandover = orders.find(
+      (order) =>
+        order.paymentConfirmed &&
+        order.items?.some((item) => item.showInOpenOrders === false && !item.done)
+    );
+    if (paidOrderWithPendingHandover) {
+      setHandoverOrderId(paidOrderWithPendingHandover.id);
+    }
+  }, [orders, handoverOrderId]);
 
   useEffect(() => {
     if (!positions.length && articles[0]) {
-      setPositions([{ id: `pos-${Date.now()}`, articleId: articles[0].id, quantity: 1, toppings: [] }]);
+      setPositions([{ id: `pos-${Date.now()}`, articleId: articles[0].id, toppings: [] }]);
     }
   }, [articles, positions.length]);
 
@@ -409,7 +413,6 @@ function OrdersPage({ articles, toppings, orders, setOrders }) {
       {
         id: `pos-${Date.now()}-${Math.random()}`,
         articleId: articles[0].id,
-        quantity: 1,
         toppings: [],
       },
     ]);
@@ -439,39 +442,76 @@ function OrdersPage({ articles, toppings, orders, setOrders }) {
       return sum + Number(topping?.price || 0);
     }, 0);
 
-    return (Number(article.price) + toppingPrice) * Number(position.quantity || 1);
+    return Number(article.price) + toppingPrice;
   };
 
   const orderTotal = positions.reduce((sum, position) => sum + positionOrderTotal(position), 0);
+  const editingOrder = orders.find((order) => order.id === editingOrderId) || null;
+  const requiresCustomerNumber = positions.some((position) => {
+    const article = articles.find((item) => item.id === position.articleId);
+    return article && article.showInOpenOrders !== false;
+  });
 
   const handleSubmit = (event) => {
     event.preventDefault();
 
     const validPositions = positions.filter((position) => position.articleId);
-    if (!validPositions.length) {
+    if (!validPositions.length || (requiresCustomerNumber && !customerNumber.trim())) {
       return;
     }
 
-    const nextOrderNumber = getNextOrderNumber(orders);
     const items = validPositions.map((position) => {
       const article = articles.find((item) => item.id === position.articleId);
       if (!article) {
         return null;
       }
 
+      const articleName = article.name;
+      const quantity = 1;
+      const toppings = position.toppings;
+      const existingItem = editingOrder?.items.find(
+        (item) =>
+          item.articleName === articleName &&
+          Number(item.quantity || 1) === quantity &&
+          [...(item.toppings || [])].sort().join('|') === [...toppings].sort().join('|') &&
+          (item.showInOpenOrders !== false) === (article.showInOpenOrders !== false)
+      );
+
       return {
-        articleName: article.name,
-        quantity: Number(position.quantity || 1),
-        toppings: position.toppings,
-        done: false,
+        articleName,
+        quantity,
+        toppings,
+        showInOpenOrders: article.showInOpenOrders !== false,
+        done: Boolean(existingItem?.done),
       };
     }).filter(Boolean);
 
+    if (editingOrder) {
+      const updatedOrder = {
+        ...editingOrder,
+        customer: customerNumber.trim() || 'K-000',
+        customerNumber: customerNumber.trim() || 'K-000',
+        status: items.length > 0 && items.every((item) => item.done) ? 'erledigt' : 'offen',
+        total: Number(orderTotal.toFixed(2)),
+        items,
+      };
+
+      setOrders((current) =>
+        current.map((order) => (order.id === editingOrder.id ? updatedOrder : order))
+      );
+      setSaveMessage(`Bestellung ${editingOrder.id} wurde aktualisiert.`);
+      setEditingOrderId(null);
+      setCustomerNumber('');
+      setPositions(articles[0] ? [{ id: `pos-${Date.now()}`, articleId: articles[0].id, toppings: [] }] : []);
+      return;
+    }
+
     const newOrder = {
-      id: nextOrderNumber,
+      id: getNextOrderNumber(orders),
       customer: customerNumber.trim() || 'K-000',
       customerNumber: customerNumber.trim() || 'K-000',
       status: 'offen',
+      paymentConfirmed: false,
       createdAt: new Date().toISOString(),
       total: Number(orderTotal.toFixed(2)),
       items,
@@ -480,17 +520,143 @@ function OrdersPage({ articles, toppings, orders, setOrders }) {
     setOrders((current) => [newOrder, ...current]);
     setReceipt(newOrder);
     setCustomerNumber('');
-    setPositions(articles[0] ? [{ id: `pos-${Date.now()}`, articleId: articles[0].id, quantity: 1, toppings: [] }] : []);
+    setPositions(articles[0] ? [{ id: `pos-${Date.now()}`, articleId: articles[0].id, toppings: [] }] : []);
+  };
+
+  const editExistingOrder = (order) => {
+    setEditingOrderId(order.id);
+    setCustomerNumber(order.customerNumber || '');
+    setPositions(order.items.flatMap((item, index) => {
+      const article = articles.find((entry) => entry.name === item.articleName) || articles[0];
+      return Array.from({ length: Math.max(1, Number(item.quantity || 1)) }, (_, copyIndex) => ({
+        id: `edit-${order.id}-${index}-${copyIndex}-${Date.now()}`,
+        articleId: article?.id || '',
+        toppings: item.toppings || [],
+      }));
+    }));
+    setIsOrderListOpen(false);
+    setSaveMessage('');
+  };
+
+  const cancelOrderEdit = () => {
+    setEditingOrderId(null);
+    setCustomerNumber('');
+    setPositions(articles[0] ? [{ id: `pos-${Date.now()}`, articleId: articles[0].id, toppings: [] }] : []);
+  };
+
+  const confirmPayment = () => {
+    const paidOrder = {
+      ...receipt,
+      paymentConfirmed: true,
+    };
+    setOrders((current) =>
+      current.map((order) => (order.id === receipt.id ? paidOrder : order))
+    );
+    setReceipt(null);
+
+    if (paidOrder.items.some((item) => item.showInOpenOrders === false && !item.done)) {
+      setHandoverOrderId(paidOrder.id);
+    }
+  };
+
+  const completeImmediateItem = (itemIndex) => {
+    if (!handoverOrder) {
+      return;
+    }
+
+    const updatedItems = handoverOrder.items.map((item, index) =>
+      index === itemIndex ? { ...item, done: true } : item
+    );
+    const allItemsDone = updatedItems.every((item) => Boolean(item.done));
+
+    setOrders((current) =>
+      current.map((order) => {
+        if (order.id !== handoverOrder.id) {
+          return order;
+        }
+
+        return {
+          ...order,
+          items: order.items.map((item, index) =>
+            index === itemIndex ? { ...item, done: true } : item
+          ),
+          status: updatedItems.every((item) => Boolean(item.done)) ? 'erledigt' : 'offen',
+        };
+      })
+    );
+
+    if (allItemsDone) {
+      setHandoverOrderId(null);
+    }
   };
 
   return (
     <div>
-      <PageHeader title="Bestellung erfassen" subtitle="Auftrag" showBack />
+      <PageHeader title="Bestellung erfassen" showBack />
+      <div className="order-management-actions">
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => {
+            setIsOrderListOpen((isOpen) => !isOpen);
+            setSaveMessage('');
+          }}
+        >
+          <ClipboardList size={16} />
+          {isOrderListOpen ? 'Bestellungen schließen' : 'Vorhandene Bestellungen bearbeiten'}
+        </button>
+      </div>
+
+      {isOrderListOpen ? (
+        <div className="panel existing-orders-panel">
+          <div className="open-orders-section-heading">
+            <div>
+              <h2>Vorhandene Bestellungen</h2>
+              <p>Bestellung auswählen, um Kundennummer oder Positionen zu korrigieren.</p>
+            </div>
+            <span className="open-orders-count">{orders.length} gesamt</span>
+          </div>
+          {orders.length ? (
+            <div className="list">
+              {[...orders].map((order) => (
+                <button
+                  type="button"
+                  key={order.id}
+                  className="existing-order-row"
+                  onClick={() => editExistingOrder(order)}
+                >
+                  <span>
+                    <strong>{order.customerNumber || 'Keine Kundennummer'}</strong>
+                    <small>{order.items?.map((item) => `${item.quantity}× ${item.articleName}`).join(', ')}</small>
+                  </span>
+                  <span className="existing-order-meta">
+                    <strong>{formatMoney(order.total)}</strong>
+                    <small>{order.status === 'erledigt' ? 'Erledigt' : 'Offen'}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state">Noch keine Bestellungen vorhanden.</p>
+          )}
+        </div>
+      ) : null}
+
+      {saveMessage ? <p className="order-save-message" role="status">{saveMessage}</p> : null}
+
       <form className="panel" onSubmit={handleSubmit}>
+        {editingOrder ? <h2>Bestellung {editingOrder.id} bearbeiten</h2> : null}
         <div className="form-grid">
           <label>
-            Kundennummer
-            <input value={customerNumber} onChange={(e) => setCustomerNumber(e.target.value)} placeholder="z. B. K-1042" />
+            Kundennummer{requiresCustomerNumber ? ' *' : ''}
+            <input
+              value={customerNumber}
+              onChange={(e) => setCustomerNumber(e.target.value)}
+              placeholder="z. B. K-1042"
+              required={requiresCustomerNumber}
+              aria-required={requiresCustomerNumber}
+            />
+            {requiresCustomerNumber ? <small>Pflichtfeld für Artikel in offenen Aufträgen</small> : null}
           </label>
         </div>
 
@@ -518,20 +684,6 @@ function OrdersPage({ articles, toppings, orders, setOrders }) {
                       }}
                     >
                       {positionArticle ? positionArticle.name : 'Artikel auswählen'}
-                    </button>
-                  </div>
-
-                  <div className="position-quantity-field">
-                    <span>Menge</span>
-                    <button
-                      type="button"
-                      className="quantity-picker-button"
-                      onClick={() => {
-                        setActiveQuantityPositionId(position.id);
-                        setIsQuantitySelectorOpen(true);
-                      }}
-                    >
-                      {position.quantity}
                     </button>
                   </div>
 
@@ -569,39 +721,6 @@ function OrdersPage({ articles, toppings, orders, setOrders }) {
         <button type="button" className="secondary-button" onClick={addPosition}>
           <Plus size={16} /> Position hinzufügen
         </button>
-
-        {isQuantitySelectorOpen && activeQuantityPositionId ? (
-          <div className="article-picker-overlay" onClick={() => setIsQuantitySelectorOpen(false)}>
-            <div className="article-picker-modal" onClick={(event) => event.stopPropagation()}>
-              <div className="article-picker-header">
-                <h3>Menge wählen</h3>
-                <button type="button" className="icon-button" onClick={() => setIsQuantitySelectorOpen(false)}>
-                  ×
-                </button>
-              </div>
-
-              <div className="quantity-picker-grid">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`quantity-option ${positions.find((position) => position.id === activeQuantityPositionId)?.quantity === value ? 'selected' : ''}`}
-                    onClick={() => {
-                      updatePosition(activeQuantityPositionId, (current) => ({
-                        ...current,
-                        quantity: value,
-                      }));
-                      setActiveQuantityPositionId(null);
-                      setIsQuantitySelectorOpen(false);
-                    }}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null}
 
         {isArticleSelectorOpen ? (
           <div className="article-picker-overlay" onClick={() => setIsArticleSelectorOpen(false)}>
@@ -644,8 +763,13 @@ function OrdersPage({ articles, toppings, orders, setOrders }) {
         </div>
 
         <button className="primary" type="submit">
-          <ShoppingCart size={16} /> Bestellung aufnehmen
+          <ShoppingCart size={16} /> {editingOrder ? 'Änderungen speichern' : 'Bestellung aufnehmen'}
         </button>
+        {editingOrder ? (
+          <button type="button" className="secondary-button order-edit-cancel" onClick={cancelOrderEdit}>
+            Bearbeitung abbrechen
+          </button>
+        ) : null}
       </form>
 
       {receipt ? (
@@ -656,7 +780,12 @@ function OrdersPage({ articles, toppings, orders, setOrders }) {
                 <span className="receipt-label">Abrechnung</span>
                 <h3>{receipt.id}</h3>
               </div>
-              <button type="button" className="icon-button" onClick={() => setReceipt(null)}>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setReceipt(null)}
+                aria-label="Abrechnung schließen"
+              >
                 ×
               </button>
             </div>
@@ -687,9 +816,55 @@ function OrdersPage({ articles, toppings, orders, setOrders }) {
             </div>
 
             <div className="receipt-actions">
-              <button type="button" className="primary" onClick={() => setReceipt(null)}>
+              <button type="button" className="primary" onClick={confirmPayment}>
                 bezahlt
               </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {handoverOrder ? (
+        <div
+          className="receipt-overlay"
+          onClick={() => !hasPendingHandoverItems && setHandoverOrderId(null)}
+        >
+          <div className="receipt-panel handover-panel" onClick={(event) => event.stopPropagation()}>
+            <div className="receipt-header">
+              <div>
+                <span className="receipt-label">Zahlung bestätigt</span>
+                <h3>Direkt mitgegeben</h3>
+              </div>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setHandoverOrderId(null)}
+                disabled={hasPendingHandoverItems}
+                aria-label="Übersicht schließen"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="immediate-items">
+              {handoverOrder.items.map((item, index) =>
+                item.showInOpenOrders === false ? (
+                  <div key={`${handoverOrder.id}-immediate-${index}`} className={`immediate-item ${item.done ? 'done' : ''}`}>
+                    <div>
+                      <strong>{item.quantity}× {item.articleName}</strong>
+                      {item.toppings?.length ? <small>{item.toppings.join(', ')}</small> : null}
+                    </div>
+                    <button
+                      type="button"
+                      className={item.done ? 'immediate-done-button' : 'primary small'}
+                      onClick={() => completeImmediateItem(index)}
+                      disabled={item.done}
+                    >
+                      {item.done ? 'Erledigt' : 'Als erledigt markieren'}
+                    </button>
+                  </div>
+                ) : null
+              )}
             </div>
           </div>
         </div>
@@ -699,7 +874,11 @@ function OrdersPage({ articles, toppings, orders, setOrders }) {
 }
 
 function OpenOrdersPage({ orders, setOrders }) {
-  const openOrders = orders.filter((order) => order.status === 'offen');
+  const openOrders = orders.filter(
+    (order) =>
+      order.status === 'offen' &&
+      order.items?.some((item) => item.showInOpenOrders !== false && !item.done)
+  );
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const [pendingItemAction, setPendingItemAction] = useState(null);
@@ -765,11 +944,22 @@ function OpenOrdersPage({ orders, setOrders }) {
   };
 
   return (
-    <div>
-      <PageHeader title="Offene Aufträge" subtitle="Warteschlange" showBack />
-      <div className="panel">
+    <div className="open-orders-page">
+      <PageHeader title="Offene Aufträge" showBack />
+      <div className="panel open-orders-panel">
+        <div className="open-orders-section-heading">
+          <div>
+            <h2>Auftragsübersicht</h2>
+            <p>Auftrag auswählen, um Positionen abzuhaken.</p>
+          </div>
+          <span className="open-orders-count">{openOrders.length} offen</span>
+        </div>
         {openOrders.length === 0 ? (
-          <p className="empty-state">Keine offenen Aufträge vorhanden.</p>
+          <div className="open-orders-empty">
+            <span><CheckCircle2 size={24} /></span>
+            <strong>Alles erledigt</strong>
+            <p>Im Moment gibt es keine offenen Aufträge.</p>
+          </div>
         ) : (
           <div className="queue-list">
             {openOrders.map((order) => (
@@ -781,24 +971,23 @@ function OpenOrdersPage({ orders, setOrders }) {
                   setSelectedOrderId(order.id);
                   setPendingConfirmation(false);
                 }}
+                aria-label={`Auftrag für Kundennummer ${order.customerNumber || 'nicht angegeben'} öffnen`}
               >
-                <div className="queue-head">
-                  <div>
-                    <span className="order-number">{order.id}</span>
-                    <strong>{order.customer}</strong>
-                    {order.customerNumber ? <small>{order.customerNumber}</small> : null}
-                  </div>
-                  <span className="price">{formatMoney(order.total)}</span>
-                </div>
-
-                <div className="queue-details">
-                  {order.items.map((item, index) => (
-                    <div key={`${order.id}-${index}`}>
-                      {item.quantity}x {item.articleName}
-                      {item.toppings.length > 0 && <span> • {item.toppings.join(', ')}</span>}
-                    </div>
-                  ))}
-                </div>
+                <span className="queue-identifier">
+                  <small>Kundennummer</small>
+                  <strong>{order.customerNumber || '—'}</strong>
+                </span>
+                <span className="queue-order-summary">
+                  <small>Bestellt</small>
+                  {(order.items || [])
+                    .filter((item) => item.showInOpenOrders !== false)
+                    .map((item, index) => (
+                    <span key={`${order.id}-${index}`} className="queue-order-item">
+                      <strong>{item.quantity}× {item.articleName}</strong>
+                      {item.toppings?.length ? <small>{item.toppings.join(', ')}</small> : null}
+                    </span>
+                    ))}
+                </span>
               </button>
             ))}
           </div>
@@ -811,7 +1000,7 @@ function OpenOrdersPage({ orders, setOrders }) {
             <div className="receipt-header">
               <div>
                 <span className="receipt-label">Auftrag</span>
-                <h3>{selectedOrder.id}</h3>
+                <h3>Bestelldetails</h3>
               </div>
               <button type="button" className="icon-button" onClick={() => setSelectedOrderId(null)}>
                 ×
@@ -825,7 +1014,9 @@ function OpenOrdersPage({ orders, setOrders }) {
             </div>
 
             <div className="order-item-list">
-              {selectedOrder.items.map((item, index) => {
+              {selectedOrder.items.map((item, index) => ({ item, index }))
+                .filter(({ item }) => item.showInOpenOrders !== false)
+                .map(({ item, index }) => {
                 const isDone = Boolean(item.done);
 
                 return (
@@ -942,10 +1133,10 @@ function ExpensesPage({ expenses, setExpenses }) {
 
   return (
     <div>
-      <PageHeader title="Ausgaben" subtitle="Kostenverwaltung" showBack />
+      <PageHeader title="Ausgaben" showBack />
 
       <div className="two-column">
-        <form className="panel" onSubmit={addExpense}>
+        <form className="panel expenses-form" onSubmit={addExpense}>
           <h2>Neue Ausgabe erfassen</h2>
           <div className="form-grid">
             <label>
@@ -1095,7 +1286,7 @@ function FinancePage({ articles, toppings, orders, expenses }) {
 
   return (
     <div>
-      <PageHeader title="Finanzen" subtitle="Wirtschaftlichkeit" showBack />
+      <PageHeader title="Finanzen" showBack />
 
       <div className="summary-grid">
         <div className="metric-card blue">
@@ -1174,21 +1365,25 @@ function FinancePage({ articles, toppings, orders, expenses }) {
 }
 
 function Layout({ children }) {
+  const { pathname } = useLocation();
+
   return (
     <div className="app-shell">
       <main className="content">
-        <header className="topbar">
-          <div className="topbar-left">
-            <div className="brand-mark">
-              <LayoutGrid size={18} />
+        {pathname === '/' ? (
+          <header className="topbar">
+            <div className="topbar-left">
+              <div className="brand-mark">
+                <LayoutGrid size={18} />
+              </div>
+              <h2>ERP Weihnachtsmarkt</h2>
             </div>
-            <h2>ERP Weihnachtsmarkt</h2>
-          </div>
 
-          <div className="topbar-actions">
-            <span className="status-pill">Live</span>
-          </div>
-        </header>
+            <div className="topbar-actions">
+              <span className="status-pill">Live</span>
+            </div>
+          </header>
+        ) : null}
 
         {children}
       </main>
@@ -1205,7 +1400,7 @@ export default function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<DashboardPage articles={articles} toppings={toppings} orders={orders} expenses={expenses} />} />
+        <Route path="/" element={<DashboardPage articles={articles} orders={orders} expenses={expenses} />} />
         <Route
           path="/artikel"
           element={<ArticlesPage articles={articles} setArticles={setArticles} toppings={toppings} setToppings={setToppings} />}
