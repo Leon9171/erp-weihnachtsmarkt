@@ -59,6 +59,76 @@ button {
   box-shadow: var(--shadow);
 }
 
+.auth-shell {
+  display: grid;
+  place-items: center;
+}
+
+.auth-content {
+  width: min(480px, 100%);
+  padding: 18px;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  font-size: 1.15rem;
+  font-weight: 850;
+}
+
+.auth-panel {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 24px;
+}
+
+.auth-panel h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.auth-panel > p {
+  margin: -8px 0 0;
+  color: var(--muted);
+}
+
+.auth-panel > button.primary {
+  width: 100%;
+}
+
+.auth-error,
+.workspace-save-error {
+  color: #a32121;
+}
+
+.auth-error {
+  margin: 0;
+  font-weight: 700;
+}
+
+.auth-access-error .secondary-button {
+  justify-self: start;
+  margin: 0;
+}
+
+.workspace-save-error {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  z-index: 100;
+  max-width: min(600px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  padding: 10px 14px;
+  border: 1px solid rgba(163, 33, 33, 0.2);
+  border-radius: 12px;
+  background: #fff3f3;
+  box-shadow: var(--shadow);
+  font-size: 0.85rem;
+}
+
 .brand-mark {
   width: 36px;
   height: 36px;
@@ -190,6 +260,23 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.sign-out-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.sign-out-button:hover {
+  background: var(--primary-soft);
 }
 
 .status-pill {

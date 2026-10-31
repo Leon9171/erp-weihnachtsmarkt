@@ -35,6 +35,9 @@ jobs:
         run: npm ci
 
       - name: Build app
+        env:
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build
 
       - name: Upload Pages artifact

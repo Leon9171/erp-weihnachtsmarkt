@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Route, Routes, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -6,12 +6,14 @@ import {
   ClipboardList,
   Coins,
   LayoutGrid,
+  LogOut,
   Package2,
   Plus,
   ReceiptText,
   ShoppingCart,
   Trash2,
 } from 'lucide-react';
+import { supabase } from './lib/supabase';
 
 const STORAGE_KEY_ARTICLES = 'erp-weihnachtsmarkt-articles';
 const STORAGE_KEY_TOPPINGS = 'erp-weihnachtsmarkt-toppings';
@@ -1421,7 +1423,317 @@ function FinancePage({ articles, toppings, orders, expenses }) {
   );
 }
 
-function Layout({ children }) {
+function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (loginError) {
+      setError('Anmeldung fehlgeschlagen. Prüfe E-Mail-Adresse und Passwort.');
+    }
+
+    setIsSubmitting(false);
+  };
+
+  return (
+    <div className="app-shell auth-shell">
+      <main className="content auth-content">
+        <div className="auth-brand">
+          <div className="brand-mark"><LayoutGrid size={18} /></div>
+          <span>ERP Weihnachtsmarkt</span>
+        </div>
+        <form className="panel auth-panel" onSubmit={handleSubmit}>
+          <h1>Anmelden</h1>
+          <p>Mit deinem ERP-Teamkonto anmelden.</p>
+          <label>
+            E-Mail-Adresse
+            <input
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Passwort
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </label>
+          {error ? <p className="auth-error" role="alert">{error}</p> : null}
+          <button className="primary" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Anmeldung läuft …' : 'Anmelden'}
+          </button>
+        </form>
+      </main>
+    </div>
+  );
+}
+
+function PasswordSetupPage({ user }) {
+  const [password, setPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+
+    if (password !== passwordConfirmation) {
+      setError('Die Passwörter stimmen nicht überein.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const { error: updateError } = await supabase.auth.updateUser({
+      password,
+      data: { ...user.user_metadata, erp_password_set: true },
+    });
+
+    if (updateError) {
+      setError(`Passwort konnte nicht gespeichert werden: ${updateError.message}`);
+    }
+    setIsSubmitting(false);
+  };
+
+  return (
+    <div className="app-shell auth-shell">
+      <main className="content auth-content">
+        <div className="auth-brand">
+          <div className="brand-mark"><LayoutGrid size={18} /></div>
+          <span>ERP Weihnachtsmarkt</span>
+        </div>
+        <form className="panel auth-panel" onSubmit={handleSubmit}>
+          <h1>Passwort festlegen</h1>
+          <p>Lege ein Passwort für dein ERP-Teamkonto fest.</p>
+          <label>
+            Neues Passwort
+            <input
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Passwort wiederholen
+            <input
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              value={passwordConfirmation}
+              onChange={(event) => setPasswordConfirmation(event.target.value)}
+              required
+            />
+          </label>
+          {error ? <p className="auth-error" role="alert">{error}</p> : null}
+          <button className="primary" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Passwort wird gespeichert …' : 'Passwort speichern'}
+          </button>
+        </form>
+      </main>
+    </div>
+  );
+}
+
+function WorkspaceApp({ session, onSignOut }) {
+  const [articles, setArticles] = useStoredState(STORAGE_KEY_ARTICLES, defaultArticles);
+  const [toppings, setToppings] = useStoredState(STORAGE_KEY_TOPPINGS, defaultToppings);
+  const [orders, setOrders] = useStoredState(STORAGE_KEY_ORDERS, defaultOrders);
+  const [expenses, setExpenses] = useStoredState(STORAGE_KEY_EXPENSES, defaultExpenses);
+  const [isWorkspaceReady, setIsWorkspaceReady] = useState(false);
+  const [workspaceError, setWorkspaceError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const skipFirstSave = useRef(true);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadWorkspace = async () => {
+      const { data: membership, error: membershipError } = await supabase
+        .from('erp_members')
+        .select('user_id')
+        .maybeSingle();
+
+      if (!isActive) return;
+      if (membershipError) {
+        setWorkspaceError(`Teamzugriff konnte nicht geprüft werden: ${membershipError.message}`);
+        return;
+      }
+      if (!membership) {
+        setWorkspaceError('Dieses Konto ist noch nicht für das ERP-Team freigeschaltet.');
+        return;
+      }
+
+      const { data, error: workspaceLoadError } = await supabase
+        .from('erp_workspace_data')
+        .select('articles, toppings, orders, expenses')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (!isActive) return;
+      if (workspaceLoadError) {
+        setWorkspaceError(`ERP-Daten konnten nicht geladen werden: ${workspaceLoadError.message}`);
+        return;
+      }
+
+      if (data) {
+        if (Array.isArray(data.articles)) setArticles(data.articles);
+        if (Array.isArray(data.toppings)) setToppings(data.toppings);
+        if (Array.isArray(data.orders)) setOrders(data.orders);
+        if (Array.isArray(data.expenses)) setExpenses(data.expenses);
+        setIsWorkspaceReady(true);
+        return;
+      }
+
+      const { error: initializeError } = await supabase
+        .from('erp_workspace_data')
+        .insert({
+          id: 1,
+          articles,
+          toppings,
+          orders,
+          expenses,
+        });
+
+      if (!isActive) return;
+      if (initializeError && initializeError.code !== '23505') {
+        setWorkspaceError(`ERP-Daten konnten nicht initialisiert werden: ${initializeError.message}`);
+        return;
+      }
+
+      if (initializeError?.code === '23505') {
+        const { data: existingData, error: reloadError } = await supabase
+          .from('erp_workspace_data')
+          .select('articles, toppings, orders, expenses')
+          .eq('id', 1)
+          .single();
+
+        if (!isActive) return;
+        if (reloadError) {
+          setWorkspaceError(`ERP-Daten konnten nicht geladen werden: ${reloadError.message}`);
+          return;
+        }
+
+        setArticles(existingData.articles);
+        setToppings(existingData.toppings);
+        setOrders(existingData.orders);
+        setExpenses(existingData.expenses);
+      }
+
+      setIsWorkspaceReady(true);
+    };
+
+    loadWorkspace();
+
+    return () => {
+      isActive = false;
+    };
+  }, [session.user.id]);
+
+  useEffect(() => {
+    if (!isWorkspaceReady) return undefined;
+    if (skipFirstSave.current) {
+      skipFirstSave.current = false;
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      setIsSaving(true);
+      setSaveError('');
+
+      const { error } = await supabase
+        .from('erp_workspace_data')
+        .upsert(
+          {
+            id: 1,
+            articles,
+            toppings,
+            orders,
+            expenses,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        );
+
+      if (error) {
+        setSaveError(`Speichern fehlgeschlagen: ${error.message}`);
+      }
+      setIsSaving(false);
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isWorkspaceReady, articles, toppings, orders, expenses]);
+
+  if (workspaceError) {
+    return (
+      <div className="app-shell auth-shell">
+        <main className="content auth-content">
+          <div className="panel auth-panel auth-access-error">
+            <h1>Kein Teamzugriff</h1>
+            <p>{workspaceError}</p>
+            <p>Bitte wende dich an den ERP-Administrator.</p>
+            <button type="button" className="secondary-button" onClick={onSignOut}>Abmelden</button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!isWorkspaceReady) {
+    return (
+      <div className="app-shell auth-shell">
+        <main className="content auth-content">
+          <div className="panel auth-panel"><p>ERP-Daten werden geladen …</p></div>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {saveError ? <div className="workspace-save-error" role="alert">{saveError}</div> : null}
+      <Layout onSignOut={onSignOut} isSaving={isSaving}>
+        <Routes>
+          <Route path="/" element={<DashboardPage articles={articles} orders={orders} expenses={expenses} />} />
+          <Route
+            path="/artikel"
+            element={<ArticlesPage articles={articles} setArticles={setArticles} toppings={toppings} setToppings={setToppings} />}
+          />
+          <Route
+            path="/bestellungen"
+            element={<OrdersPage articles={articles} toppings={toppings} orders={orders} setOrders={setOrders} />}
+          />
+          <Route path="/offene-auftraege" element={<OpenOrdersPage orders={orders} setOrders={setOrders} />} />
+          <Route path="/ausgaben" element={<ExpensesPage articles={articles} expenses={expenses} setExpenses={setExpenses} />} />
+          <Route path="/finanzen" element={<FinancePage articles={articles} toppings={toppings} orders={orders} expenses={expenses} />} />
+        </Routes>
+      </Layout>
+    </>
+  );
+}
+
+function Layout({ children, onSignOut, isSaving }) {
   const { pathname } = useLocation();
 
   return (
@@ -1437,7 +1749,10 @@ function Layout({ children }) {
             </div>
 
             <div className="topbar-actions">
-              <span className="status-pill">Live</span>
+              <span className={`status-pill ${isSaving ? 'saving' : ''}`}>{isSaving ? 'Speichert …' : 'Live'}</span>
+              <button type="button" className="sign-out-button" onClick={onSignOut}>
+                <LogOut size={15} /> Abmelden
+              </button>
             </div>
           </header>
         ) : null}
@@ -1449,27 +1764,75 @@ function Layout({ children }) {
 }
 
 export default function App() {
-  const [articles, setArticles] = useStoredState(STORAGE_KEY_ARTICLES, defaultArticles);
-  const [toppings, setToppings] = useStoredState(STORAGE_KEY_TOPPINGS, defaultToppings);
-  const [orders, setOrders] = useStoredState(STORAGE_KEY_ORDERS, defaultOrders);
-  const [expenses, setExpenses] = useStoredState(STORAGE_KEY_EXPENSES, defaultExpenses);
+  const [session, setSession] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
 
-  return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<DashboardPage articles={articles} orders={orders} expenses={expenses} />} />
-        <Route
-          path="/artikel"
-          element={<ArticlesPage articles={articles} setArticles={setArticles} toppings={toppings} setToppings={setToppings} />}
-        />
-        <Route
-          path="/bestellungen"
-          element={<OrdersPage articles={articles} toppings={toppings} orders={orders} setOrders={setOrders} />}
-        />
-        <Route path="/offene-auftraege" element={<OpenOrdersPage orders={orders} setOrders={setOrders} />} />
-        <Route path="/ausgaben" element={<ExpensesPage articles={articles} expenses={expenses} setExpenses={setExpenses} />} />
-        <Route path="/finanzen" element={<FinancePage articles={articles} toppings={toppings} orders={orders} expenses={expenses} />} />
-      </Routes>
-    </Layout>
-  );
+  useEffect(() => {
+    if (!supabase) {
+      setIsAuthLoading(false);
+      return undefined;
+    }
+
+    let isActive = true;
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!isActive) return;
+      if (error) setAuthError(`Supabase-Anmeldung konnte nicht geladen werden: ${error.message}`);
+      setSession(data?.session || null);
+      setIsAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthError('');
+    });
+
+    return () => {
+      isActive = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) setAuthError(`Abmelden fehlgeschlagen: ${error.message}`);
+  };
+
+  if (!supabase) {
+    return (
+      <div className="app-shell auth-shell">
+        <main className="content auth-content">
+          <div className="panel auth-panel auth-access-error">
+            <h1>Supabase nicht konfiguriert</h1>
+            <p>Die Supabase-Projekt-URL und der Publishable Key fehlen in der Frontend-Konfiguration.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (isAuthLoading) {
+    return (
+      <div className="app-shell auth-shell">
+        <main className="content auth-content">
+          <div className="panel auth-panel"><p>Anmeldung wird geprüft …</p></div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <>
+        {authError ? <div className="workspace-save-error" role="alert">{authError}</div> : null}
+        <LoginPage />
+      </>
+    );
+  }
+
+  if (!session.user.user_metadata?.erp_password_set) {
+    return <PasswordSetupPage user={session.user} />;
+  }
+
+  return <WorkspaceApp session={session} onSignOut={handleSignOut} />;
 }
