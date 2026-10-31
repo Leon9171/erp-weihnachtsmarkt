@@ -78,6 +78,10 @@ button {
   font-weight: 850;
 }
 
+.auth-brand .reload-page-button {
+  margin-left: auto;
+}
+
 .auth-panel {
   display: grid;
   gap: 16px;
@@ -279,26 +283,32 @@ button {
   background: var(--primary-soft);
 }
 
-.status-pill {
+.reload-page-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(29, 78, 216, 0.1);
-  color: var(--primary);
-  border: 1px solid rgba(29, 78, 216, 0.18);
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 0.82rem;
-  font-weight: 700;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.68;
+  transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
 }
 
-.status-pill::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 0 5px rgba(29, 78, 216, 0.12);
+.reload-page-button:hover,
+.reload-page-button:focus-visible {
+  border-color: var(--border);
+  background: var(--primary-soft);
+  color: var(--primary);
+  opacity: 1;
+}
+
+.reload-page-button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .menu-toggle,
@@ -1305,6 +1315,69 @@ button.small {
   color: var(--muted);
 }
 
+.order-delete-item {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.order-delete-item .list-item {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.order-delete-details {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.order-delete-details > span,
+.order-delete-details > small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.delete-confirmation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(163, 33, 33, 0.14);
+  background: #fff7f7;
+  color: #842323;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.delete-confirm-actions .secondary-button {
+  margin: 0;
+  padding: 8px 11px;
+}
+
+.delete-confirm-button {
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #a32121;
+  color: #fff;
+  font-weight: 750;
+}
+
+.delete-confirm-button:hover {
+  background: #831b1b;
+}
+
 .order-save-message {
   margin: 0 0 14px;
   padding: 11px 14px;
@@ -1378,7 +1451,6 @@ button.small {
     grid-template-columns: 1fr 0.6fr 1fr 1fr 1fr;
     font-size: 0.8rem;
   }
-
 }
 
 @media (max-width: 480px) {
@@ -1401,13 +1473,21 @@ button.small {
     line-height: 1.2;
   }
 
-  .status-pill {
-    padding: 6px 10px;
-    font-size: 0.72rem;
+  .page-header {
+    gap: 8px;
+  }
+
+  .page-header > div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .back-link {
+    gap: 5px;
+    padding: 8px 9px;
   }
 
   .page-header {
-    gap: 10px;
     margin-bottom: 18px;
   }
 
@@ -1417,8 +1497,9 @@ button.small {
   }
 
   .page-header h1 {
-    font-size: 1.7rem;
+    font-size: clamp(1.35rem, 6vw, 1.7rem);
     margin-bottom: 0;
+    overflow-wrap: anywhere;
   }
 
   .metric-card strong {
@@ -1440,6 +1521,16 @@ button.small {
   .open-orders-section-heading {
     align-items: flex-start;
     gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .delete-confirmation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .delete-confirm-actions > button {
+    flex: 1;
   }
 
   .open-orders-section-heading p {
@@ -1450,5 +1541,33 @@ button.small {
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 14px 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .two-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .finance-table {
+    overflow-x: auto;
+  }
+
+  .finance-row {
+    min-width: 600px;
+  }
+}
+
+@media (max-width: 360px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .topbar-left {
+    flex: 1 1 100%;
+  }
+
+  .topbar-actions {
+    margin-left: auto;
   }
 }

@@ -9,6 +9,7 @@ import {
   LogOut,
   Package2,
   Plus,
+  RefreshCw,
   ReceiptText,
   ShoppingCart,
   Trash2,
@@ -96,7 +97,22 @@ function PageHeader({ title, showBack = false }) {
       <div>
         <h1>{title}</h1>
       </div>
+      <ReloadButton />
     </div>
+  );
+}
+
+function ReloadButton() {
+  return (
+    <button
+      type="button"
+      className="reload-page-button"
+      aria-label="Seite neu laden"
+      title="Seite neu laden"
+      onClick={() => window.location.reload()}
+    >
+      <RefreshCw size={16} />
+    </button>
   );
 }
 
@@ -128,6 +144,13 @@ function DashboardPage({ articles, orders, expenses }) {
       description: 'Neue Bestellung erfassen',
       accent: 'pink',
       icon: ShoppingCart,
+    },
+    {
+      to: '/auftraege-loeschen',
+      title: 'Aufträge löschen',
+      description: 'Erfasste Bestellungen entfernen',
+      accent: 'orange',
+      icon: Trash2,
     },
     {
       to: '/ausgaben',
@@ -318,7 +341,13 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
                 </div>
                 <div className="list-meta">
                   <span>{formatMoney(article.price)}</span>
-                  <button type="button" className="icon-button" onClick={() => removeArticle(article.id)}>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => removeArticle(article.id)}
+                    aria-label={`${article.name} löschen`}
+                    title="Artikel löschen"
+                  >
                     <Trash2 size={15} />
                   </button>
                 </div>
@@ -338,7 +367,13 @@ function ArticlesPage({ articles, setArticles, toppings, setToppings }) {
                 </div>
                 <div className="list-meta">
                   <span>{formatMoney(topping.price)}</span>
-                  <button type="button" className="icon-button" onClick={() => removeTopping(topping.id)}>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => removeTopping(topping.id)}
+                    aria-label={`${topping.name} löschen`}
+                    title="Topping löschen"
+                  >
                     <Trash2 size={15} />
                   </button>
                 </div>
@@ -875,6 +910,94 @@ function OrdersPage({ articles, toppings, orders, setOrders }) {
   );
 }
 
+function DeleteOrdersPage({ orders, setOrders }) {
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+
+  const deleteOrder = (orderId) => {
+    setOrders((current) => current.filter((order) => order.id !== orderId));
+    setPendingDeleteId(null);
+  };
+
+  return (
+    <div>
+      <PageHeader title="Aufträge löschen" showBack />
+      <div className="panel">
+        <div className="open-orders-section-heading">
+          <div>
+            <h2>Bestellungen</h2>
+            <p>Bestellungen werden dauerhaft aus dem gemeinsamen ERP entfernt.</p>
+          </div>
+          <span className="open-orders-count">{orders.length} gesamt</span>
+        </div>
+        {orders.length === 0 ? (
+          <p className="empty-state">Keine Bestellungen vorhanden.</p>
+        ) : (
+          <div className="list">
+            {orders.map((order) => {
+              const date = order.createdAt ? new Date(order.createdAt) : null;
+              const formattedDate =
+                date && !Number.isNaN(date.getTime())
+                  ? date.toLocaleDateString('de-DE')
+                  : 'Datum unbekannt';
+
+              return (
+                <div key={order.id} className="order-delete-item">
+                  <div className="list-item">
+                    <div className="order-delete-details">
+                      <strong>{order.id}</strong>
+                      <span>
+                        Kundennummer: {order.customerNumber || '—'} · {formattedDate} · {order.status || 'offen'}
+                      </span>
+                      <small>
+                        {(order.items || [])
+                          .map((item) => `${item.quantity}× ${item.articleName}`)
+                          .join(', ') || 'Keine Positionen'}
+                      </small>
+                    </div>
+                    <div className="list-meta">
+                      <strong>{formatMoney(order.total)}</strong>
+                      <button
+                        type="button"
+                        className="icon-button"
+                        onClick={() => setPendingDeleteId(order.id)}
+                        aria-label={`Bestellung ${order.id} löschen`}
+                        title="Bestellung löschen"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+                  {pendingDeleteId === order.id ? (
+                    <div className="delete-confirmation" role="alert">
+                      <span>Bestellung {order.id} wirklich löschen?</span>
+                      <div className="delete-confirm-actions">
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => setPendingDeleteId(null)}
+                        >
+                          Abbrechen
+                        </button>
+                        <button
+                          type="button"
+                          className="delete-confirm-button"
+                          onClick={() => deleteOrder(order.id)}
+                        >
+                          Löschen
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function OpenOrdersPage({ orders, setOrders }) {
   const openOrders = orders.filter(
     (order) =>
@@ -1208,7 +1331,13 @@ function ExpensesPage({ articles, expenses, setExpenses }) {
                 </div>
                 <div className="list-meta">
                   <span>{formatMoney(expense.amount)}</span>
-                  <button type="button" className="icon-button" onClick={() => removeExpense(expense.id)}>
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => removeExpense(expense.id)}
+                    aria-label={`${expense.title} löschen`}
+                    title="Ausgabe löschen"
+                  >
                     <Trash2 size={15} />
                   </button>
                 </div>
@@ -1452,6 +1581,7 @@ function LoginPage() {
         <div className="auth-brand">
           <div className="brand-mark"><LayoutGrid size={18} /></div>
           <span>ERP Weihnachtsmarkt</span>
+          <ReloadButton />
         </div>
         <form className="panel auth-panel" onSubmit={handleSubmit}>
           <h1>Anmelden</h1>
@@ -1519,6 +1649,7 @@ function PasswordSetupPage({ user }) {
         <div className="auth-brand">
           <div className="brand-mark"><LayoutGrid size={18} /></div>
           <span>ERP Weihnachtsmarkt</span>
+          <ReloadButton />
         </div>
         <form className="panel auth-panel" onSubmit={handleSubmit}>
           <h1>Passwort festlegen</h1>
@@ -1563,7 +1694,6 @@ function WorkspaceApp({ session, onSignOut }) {
   const [isWorkspaceReady, setIsWorkspaceReady] = useState(false);
   const [workspaceError, setWorkspaceError] = useState('');
   const [saveError, setSaveError] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
   const skipFirstSave = useRef(true);
 
   useEffect(() => {
@@ -1659,7 +1789,6 @@ function WorkspaceApp({ session, onSignOut }) {
     }
 
     const timeoutId = window.setTimeout(async () => {
-      setIsSaving(true);
       setSaveError('');
 
       const { error } = await supabase
@@ -1679,7 +1808,6 @@ function WorkspaceApp({ session, onSignOut }) {
       if (error) {
         setSaveError(`Speichern fehlgeschlagen: ${error.message}`);
       }
-      setIsSaving(false);
     }, 500);
 
     return () => window.clearTimeout(timeoutId);
@@ -1713,7 +1841,7 @@ function WorkspaceApp({ session, onSignOut }) {
   return (
     <>
       {saveError ? <div className="workspace-save-error" role="alert">{saveError}</div> : null}
-      <Layout onSignOut={onSignOut} isSaving={isSaving}>
+      <Layout onSignOut={onSignOut}>
         <Routes>
           <Route path="/" element={<DashboardPage articles={articles} orders={orders} expenses={expenses} />} />
           <Route
@@ -1724,6 +1852,10 @@ function WorkspaceApp({ session, onSignOut }) {
             path="/bestellungen"
             element={<OrdersPage articles={articles} toppings={toppings} orders={orders} setOrders={setOrders} />}
           />
+          <Route
+            path="/auftraege-loeschen"
+            element={<DeleteOrdersPage orders={orders} setOrders={setOrders} />}
+          />
           <Route path="/offene-auftraege" element={<OpenOrdersPage orders={orders} setOrders={setOrders} />} />
           <Route path="/ausgaben" element={<ExpensesPage articles={articles} expenses={expenses} setExpenses={setExpenses} />} />
           <Route path="/finanzen" element={<FinancePage articles={articles} toppings={toppings} orders={orders} expenses={expenses} />} />
@@ -1733,7 +1865,7 @@ function WorkspaceApp({ session, onSignOut }) {
   );
 }
 
-function Layout({ children, onSignOut, isSaving }) {
+function Layout({ children, onSignOut }) {
   const { pathname } = useLocation();
 
   return (
@@ -1749,7 +1881,7 @@ function Layout({ children, onSignOut, isSaving }) {
             </div>
 
             <div className="topbar-actions">
-              <span className={`status-pill ${isSaving ? 'saving' : ''}`}>{isSaving ? 'Speichert …' : 'Live'}</span>
+              <ReloadButton />
               <button type="button" className="sign-out-button" onClick={onSignOut}>
                 <LogOut size={15} /> Abmelden
               </button>

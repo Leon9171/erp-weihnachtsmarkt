@@ -62,5 +62,6 @@ Die Anwendung verlangt eine Supabase-Anmeldung. Nur Mitglieder in `erp_members` 
 - Dashboard mit Kennzahlen
 - Produktübersicht
 - Bestellverwaltung
+- Bestellungen auf einer eigenen Seite löschen; Artikel, Toppings und Ausgaben direkt in ihren Listen entfernen
 - Lager-/Bestandsübersicht
 - Kundenverwaltung
